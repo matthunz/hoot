@@ -67,15 +67,12 @@ deleteCommand =
 appSettings :: Iris.CliEnvSettings Opts ()
 appSettings =
   Iris.defaultCliEnvSettings
-    { -- short description
-      Iris.cliEnvSettingsHeaderDesc = "Iris usage example",
-      -- longer description
-      Iris.cliEnvSettingsProgDesc = "A simple grep utility - tutorial example",
-      -- a function to display the tool version
+    { Iris.cliEnvSettingsHeaderDesc = "Hoot haskell package manager",
+      Iris.cliEnvSettingsProgDesc = "An opionated haskell package manager based on cabal.",
       Iris.cliEnvSettingsVersionSettings =
         Just
           (Iris.defaultVersionSettings Autogen.version)
-            { Iris.versionSettingsMkDesc = \v -> "Simple grep utility v" <> v
+            { Iris.versionSettingsMkDesc = ("Hoot v" <>)
             },
       -- our 'Options' CLI parser
       Iris.cliEnvSettingsCmdParser = optsParser
@@ -84,7 +81,11 @@ appSettings =
 runNew :: FilePath -> IO ()
 runNew name = do
   createDirectory name
+  writeFile (name </> "Hoot.toml") ("[package]\nname = \"" ++ name ++ "\"\n\n[dependencies]\n")
+  
   createDirectory (name </> "src")
+  writeFile (name </> "src" </> "Main.hs") "module Main (main) where\n\nmain :: IO ()\nmain = putStrLn \"Hello World!\""
+
 
 app :: App ()
 app = do
