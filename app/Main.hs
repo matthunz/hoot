@@ -1,7 +1,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards, ImportQualifiedPost #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main (main) where
 
@@ -11,6 +12,8 @@ import Data.Text.IO qualified as Text (putStrLn)
 import Iris qualified
 import Options.Applicative
 import Paths_hoot as Autogen
+import System.Directory
+import System.FilePath
 
 newtype App a = App
   { unApp :: Iris.CliApp Opts () a
@@ -78,11 +81,19 @@ appSettings =
       Iris.cliEnvSettingsCmdParser = optsParser
     }
 
+runNew :: FilePath -> IO ()
+runNew name = do
+  createDirectory name
+  createDirectory (name </> "src")
+
 app :: App ()
 app = do
-  -- 1. Get parsed 'Options' from the environment
   Opts {..} <- Iris.asksCliEnv Iris.cliEnvCmd
-  liftIO $ Text.putStrLn "WAT"
+
+  let cmd = case optCommand of
+        NewCommand name -> runNew name
+        DeleteCommand -> putStrLn "huh"
+  liftIO cmd
 
 main :: IO ()
 main = Iris.runCliApp appSettings $ unApp app

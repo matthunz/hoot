@@ -26,6 +26,8 @@ dependencies:
 - text
 - mtl
 - pretty-terminal
+- directory
+- filepath
 
 ghc-options:
 - -Wall
