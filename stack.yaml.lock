@@ -18,6 +18,13 @@ packages:
       size: 385
   original:
     hackage: pretty-terminal-0.1.0.0
+- completed:
+    hackage: toml-parser-1.1.1.0@sha256:670b977618e7fa476460535c4ccdcb70b090387e5394ac050e41b4334fda0b11,2572
+    pantry-tree:
+      sha256: d9cb146694f9fa9abced301a95058cebc7fe0c1e44813ef9da253914d6fb049c
+      size: 1599
+  original:
+    hackage: toml-parser-1.1.1.0
 snapshots:
 - completed:
     sha256: c4381351ba5837a6356fcc0ebeb7a61fdcaf3a085c903a6f730f56b131d5cb58

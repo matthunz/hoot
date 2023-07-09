@@ -27,7 +27,7 @@ library
   exposed-modules:
       Cabal
       Lib
-      Toml
+      Package
   other-modules:
       Paths_hoot
   hs-source-dirs:
@@ -45,6 +45,7 @@ library
     , pretty-terminal
     , process
     , text
+    , toml-parser
   default-language: Haskell2010
 
 executable hoot
@@ -67,6 +68,7 @@ executable hoot
     , pretty-terminal
     , process
     , text
+    , toml-parser
   default-language: Haskell2010
 
 test-suite hoot-test
@@ -90,4 +92,5 @@ test-suite hoot-test
     , pretty-terminal
     , process
     , text
+    , toml-parser
   default-language: Haskell2010

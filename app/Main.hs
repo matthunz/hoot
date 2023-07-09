@@ -17,7 +17,9 @@ import System.Directory (createDirectory)
 import System.FilePath
 import System.Process (system)
 import Text.Parsec.Text (parseFromFile)
-import Toml
+import qualified Package
+import System.IO
+import qualified Toml
 
 newtype App a = App
   { unApp :: Iris.CliApp Opts () a
@@ -101,11 +103,16 @@ handleNew name = do
 
 handleRun :: IO ()
 handleRun = do
-  res <- parseFromFile parsePackage "Hoot.toml"
-  case res of
-    Left err -> print err
-    Right table -> do
-      writeFile (packageName table <.> "cabal") (snd $ runWriter $ Cabal.initCabal $ packageName table)
+  h <- openFile "Hoot.toml" ReadMode
+  contents <-  hGetContents h
+
+  case Package.parsePackage contents of
+    Toml.Failure err -> print err
+    Toml.Success _ table -> do
+      print table
+      let packageName = Package.name $ Package.package table
+      writeFile ( packageName <.> "cabal") (snd $ runWriter $ Cabal.initCabal $ packageName)
+
 
 handleAdd :: [String] -> IO ()
 handleAdd names = do
