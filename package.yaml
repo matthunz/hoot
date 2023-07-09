@@ -30,6 +30,7 @@ dependencies:
 - filepath
 - parsec
 - containers
+- process
 
 ghc-options:
 - -Wall

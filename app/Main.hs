@@ -6,19 +6,18 @@
 
 module Main (main) where
 
-import Control.Monad.IO.Class (MonadIO (..))
+import Cabal
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.Writer
 import Iris qualified
+import Lib (parseCabal)
 import Options.Applicative
 import Paths_hoot as Autogen
-import System.Directory
+import System.Directory (createDirectory)
 import System.FilePath
+import System.Process (system)
 import Text.Parsec.Text (parseFromFile)
 import Toml
-import Cabal
-import Text.Parsec (parse)
-import Lib (parseCabal)
 
 newtype App a = App
   { unApp :: Iris.CliApp Opts () a
@@ -39,9 +38,7 @@ data Opts = Opts
 data Command
   = NewCommand String
   | RunCommand
-
-optsParser :: Parser Opts
-optsParser = (helper <*> versionOption <*> programOptions)
+  | AddCommand [String]
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption "0.0" (long "version" <> help "Show version")
@@ -50,7 +47,7 @@ programOptions :: Parser Opts
 programOptions =
   Opts
     <$> switch (long "global-flag" <> help "Set a global flag")
-    <*> hsubparser (newCommand <> runCommand)
+    <*> hsubparser (newCommand <> runCommand <> addCommand)
 
 newCommand :: Mod CommandFields Command
 newCommand =
@@ -68,6 +65,18 @@ runCommand =
   command
     "run"
     (info (pure RunCommand) (progDesc "Run a binary or example of the local package"))
+
+addCommand :: Mod CommandFields Command
+addCommand =
+  command
+    "add"
+    (info opts (progDesc "Create a new hoot package"))
+  where
+    opts :: Parser Command
+    opts = AddCommand <$> some (argument str (metavar "NAME" <> help "Name of the packages to add"))
+
+optsParser :: Parser Opts
+optsParser = helper <*> versionOption <*> programOptions
 
 appSettings :: Iris.CliEnvSettings Opts ()
 appSettings =
@@ -95,21 +104,35 @@ handleRun = do
   res <- parseFromFile parsePackage "Hoot.toml"
   case res of
     Left err -> print err
-    Right table -> writeFile (packageName table <.> "cabal") (snd $ runWriter $ Cabal.initCabal $ packageName table)
+    Right table -> do
+      writeFile (packageName table <.> "cabal") (snd $ runWriter $ Cabal.initCabal $ packageName table)
+
+handleAdd :: [String] -> IO ()
+handleAdd names = do
+  -- Freeze the cabal file to resolve package versions
+  _ <- system "cabal freeze"
+
+  -- TODO Add the new packages to the cabal file
+
+  -- Parse the dependencies from the freeze
+  res <- parseFromFile parseCabal "cabal.project.freeze"
+  case res of
+    Left err -> putStrLn $ "Parsing error: " ++ show err
+    Right result -> do
+      let findMatches :: [String] -> [(String, String)] -> [(String, String)]
+          findMatches strings = filter (\(x, _) -> x `elem` strings)
+
+      -- TODO Update the package versions for the new dependencies
+      mapM_ (\(name, v) -> putStrLn $ "Added " ++ name ++ " v" ++ v) (findMatches names result)
 
 app :: App ()
 app = do
   Opts {..} <- Iris.asksCliEnv Iris.cliEnvCmd
-
   let cmd = case optCommand of
         NewCommand name -> handleNew name
         RunCommand -> handleRun
+        AddCommand names -> handleAdd names
   liftIO cmd
 
 main :: IO ()
--- main = Iris.runCliApp appSettings $ unApp app
-main = do
-  res <- parseFromFile parseCabal "../example/cabal.project.freeze"
-  case res of
-    Left err -> putStrLn $ "Parsing error: " ++ show err
-    Right result -> print result
+main = Iris.runCliApp appSettings $ unApp app
