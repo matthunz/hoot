@@ -1,6 +1,8 @@
 # Hoot
 Opinionated haskell package builder (based on cabal)
 
+* WIP: Only `hoot add` package resolution works so far
+
 ### Create a new project
 ```sh
 hoot new hello
