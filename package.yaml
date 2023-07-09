@@ -46,7 +46,7 @@ library:
   source-dirs: src
 
 executables:
-  hoot-exe:
+  hoot:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

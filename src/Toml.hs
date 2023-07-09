@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 
-module Toml (parsePackage, Package) where
+module Toml (parsePackage, Package, packageName) where
 
 import Data.Functor
 import Data.Map

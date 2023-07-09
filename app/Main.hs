@@ -8,17 +8,15 @@ module Main (main) where
 
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader)
-import Data.Text.IO qualified as Text (putStrLn)
+import Control.Monad.Writer
 import Iris qualified
 import Options.Applicative
 import Paths_hoot as Autogen
 import System.Directory
 import System.FilePath
-import System.IO (IOMode (ReadMode), hGetContents, openFile, withFile)
-import Text.Parsec
-
-import Toml
 import Text.Parsec.Text (parseFromFile)
+import Toml
+import Cabal
 
 newtype App a = App
   { unApp :: Iris.CliApp Opts () a
@@ -79,7 +77,6 @@ appSettings =
           (Iris.defaultVersionSettings Autogen.version)
             { Iris.versionSettingsMkDesc = ("Hoot v" <>)
             },
-      -- our 'Options' CLI parser
       Iris.cliEnvSettingsCmdParser = optsParser
     }
 
@@ -93,11 +90,10 @@ handleNew name = do
 
 handleRun :: IO ()
 handleRun = do
-  res <- parseFromFile parsePackage "Hoot.toml" 
+  res <- parseFromFile parsePackage "Hoot.toml"
   case res of
     Left err -> print err
-    Right table -> print table
- 
+    Right table -> writeFile (packageName table <.> "cabal") (snd $ runWriter $ Cabal.initCabal $ packageName table)
 
 app :: App ()
 app = do
