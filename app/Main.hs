@@ -17,6 +17,8 @@ import System.FilePath
 import Text.Parsec.Text (parseFromFile)
 import Toml
 import Cabal
+import Text.Parsec (parse)
+import Lib (parseCabal)
 
 newtype App a = App
   { unApp :: Iris.CliApp Opts () a
@@ -105,4 +107,9 @@ app = do
   liftIO cmd
 
 main :: IO ()
-main = Iris.runCliApp appSettings $ unApp app
+-- main = Iris.runCliApp appSettings $ unApp app
+main = do
+  res <- parseFromFile parseCabal "../example/cabal.project.freeze"
+  case res of
+    Left err -> putStrLn $ "Parsing error: " ++ show err
+    Right result -> print result
