@@ -3,6 +3,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main (main) where
 
@@ -12,14 +13,14 @@ import Control.Monad.Writer
 import Iris qualified
 import Lib (parseCabal)
 import Options.Applicative
+import Package qualified
 import Paths_hoot as Autogen
 import System.Directory (createDirectory)
 import System.FilePath
+import System.IO
 import System.Process (system)
 import Text.Parsec.Text (parseFromFile)
-import qualified Package
-import System.IO
-import qualified Toml
+import Toml qualified
 
 newtype App a = App
   { unApp :: Iris.CliApp Opts () a
@@ -104,22 +105,32 @@ handleNew name = do
 handleRun :: IO ()
 handleRun = do
   h <- openFile "Hoot.toml" ReadMode
-  contents <-  hGetContents h
+  contents <- hGetContents h
 
   case Package.parsePackage contents of
     Toml.Failure err -> print err
     Toml.Success _ table -> do
       print table
       let packageName = Package.name $ Package.package table
-      writeFile ( packageName <.> "cabal") (snd $ runWriter $ Cabal.initCabal $ packageName)
-
+      writeFile (packageName <.> "cabal") (snd $ runWriter $ initCabal $ packageName)
 
 handleAdd :: [String] -> IO ()
 handleAdd names = do
+  let output =
+        snd $
+          runWriter $
+            writeCabal
+              CabalPackage
+                { cabalVersion = "2.4",
+                  name = "example",
+                  version = "0.1",
+                  deps = map (,">0") names
+                }
+
+  _ <- writeFile "example.cabal" output
+
   -- Freeze the cabal file to resolve package versions
   _ <- system "cabal freeze"
-
-  -- TODO Add the new packages to the cabal file
 
   -- Parse the dependencies from the freeze
   res <- parseFromFile parseCabal "cabal.project.freeze"

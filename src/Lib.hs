@@ -13,7 +13,7 @@ parseDep :: Parser (String, String)
 parseDep = do
   _ <- manyTill anyChar (try (string " any."))
   name <- manyTill anyChar (try (string " =="))
-  version <- manyTill anyChar (try (string ","))
+  version <- manyTill anyChar (try (string "," <|> string "\n"))
   return (name, version)
 
 parseCabal :: Parser [(String, String)]
