@@ -14,6 +14,11 @@ import Options.Applicative
 import Paths_hoot as Autogen
 import System.Directory
 import System.FilePath
+import System.IO (IOMode (ReadMode), hGetContents, openFile, withFile)
+import Text.Parsec
+
+import Toml
+import Text.Parsec.Text (parseFromFile)
 
 newtype App a = App
   { unApp :: Iris.CliApp Opts () a
@@ -33,7 +38,7 @@ data Opts = Opts
 
 data Command
   = NewCommand String
-  | DeleteCommand
+  | RunCommand
 
 optsParser :: Parser Opts
 optsParser = (helper <*> versionOption <*> programOptions)
@@ -45,7 +50,7 @@ programOptions :: Parser Opts
 programOptions =
   Opts
     <$> switch (long "global-flag" <> help "Set a global flag")
-    <*> hsubparser (newCommand <> deleteCommand)
+    <*> hsubparser (newCommand <> runCommand)
 
 newCommand :: Mod CommandFields Command
 newCommand =
@@ -58,11 +63,11 @@ createOptions =
   NewCommand
     <$> strArgument (metavar "NAME" <> help "Name of the thing to create")
 
-deleteCommand :: Mod CommandFields Command
-deleteCommand =
+runCommand :: Mod CommandFields Command
+runCommand =
   command
-    "delete"
-    (info (pure DeleteCommand) (progDesc "Delete the thing"))
+    "run"
+    (info (pure RunCommand) (progDesc "Run a binary or example of the local package"))
 
 appSettings :: Iris.CliEnvSettings Opts ()
 appSettings =
@@ -78,22 +83,29 @@ appSettings =
       Iris.cliEnvSettingsCmdParser = optsParser
     }
 
-runNew :: FilePath -> IO ()
-runNew name = do
+handleNew :: FilePath -> IO ()
+handleNew name = do
   createDirectory name
   writeFile (name </> "Hoot.toml") ("[package]\nname = \"" ++ name ++ "\"\n\n[dependencies]\n")
-  
+
   createDirectory (name </> "src")
   writeFile (name </> "src" </> "Main.hs") "module Main (main) where\n\nmain :: IO ()\nmain = putStrLn \"Hello World!\""
 
+handleRun :: IO ()
+handleRun = do
+  res <- parseFromFile parsePackage "Hoot.toml" 
+  case res of
+    Left err -> print err
+    Right table -> print table
+ 
 
 app :: App ()
 app = do
   Opts {..} <- Iris.asksCliEnv Iris.cliEnvCmd
 
   let cmd = case optCommand of
-        NewCommand name -> runNew name
-        DeleteCommand -> putStrLn "huh"
+        NewCommand name -> handleNew name
+        RunCommand -> handleRun
   liftIO cmd
 
 main :: IO ()

@@ -28,6 +28,8 @@ dependencies:
 - pretty-terminal
 - directory
 - filepath
+- parsec
+- containers
 
 ghc-options:
 - -Wall
