@@ -3,24 +3,15 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TupleSections #-}
 
 module Main (main) where
 
-import Cabal
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.Writer
 import Iris qualified
-import Lib (parseCabal)
+import Lib
 import Options.Applicative
-import Package qualified
 import Paths_hoot as Autogen
-import System.Directory (createDirectory)
-import System.FilePath
-import System.IO
-import System.Process (system)
-import Text.Parsec.Text (parseFromFile)
-import Toml qualified
 
 newtype App a = App
   { unApp :: Iris.CliApp Opts () a
@@ -43,25 +34,13 @@ data Command
   | RunCommand
   | AddCommand [String]
 
-versionOption :: Parser (a -> a)
-versionOption = infoOption "0.0" (long "version" <> help "Show version")
-
-programOptions :: Parser Opts
-programOptions =
-  Opts
-    <$> switch (long "global-flag" <> help "Set a global flag")
-    <*> hsubparser (newCommand <> runCommand <> addCommand)
-
 newCommand :: Mod CommandFields Command
 newCommand =
   command
     "new"
-    (info createOptions (progDesc "Create a new hoot package"))
-
-createOptions :: Parser Command
-createOptions =
-  NewCommand
-    <$> strArgument (metavar "NAME" <> help "Name of the thing to create")
+    (info opts (progDesc "Create a new hoot package"))
+  where
+    opts = NewCommand <$> strArgument (metavar "NAME" <> help "Name of the thing to create")
 
 runCommand :: Mod CommandFields Command
 runCommand =
@@ -78,6 +57,15 @@ addCommand =
     opts :: Parser Command
     opts = AddCommand <$> some (argument str (metavar "NAME" <> help "Name of the packages to add"))
 
+versionOption :: Parser (a -> a)
+versionOption = infoOption "0.0" (long "version" <> help "Show version")
+
+programOptions :: Parser Opts
+programOptions =
+  Opts
+    <$> switch (long "global-flag" <> help "Set a global flag")
+    <*> hsubparser (newCommand <> runCommand <> addCommand)
+
 optsParser :: Parser Opts
 optsParser = helper <*> versionOption <*> programOptions
 
@@ -93,55 +81,6 @@ appSettings =
             },
       Iris.cliEnvSettingsCmdParser = optsParser
     }
-
-handleNew :: FilePath -> IO ()
-handleNew name = do
-  createDirectory name
-  writeFile (name </> "Hoot.toml") ("[package]\nname = \"" ++ name ++ "\"\n\n[dependencies]\n")
-
-  createDirectory (name </> "src")
-  writeFile (name </> "src" </> "Main.hs") "module Main (main) where\n\nmain :: IO ()\nmain = putStrLn \"Hello World!\""
-
-handleRun :: IO ()
-handleRun = do
-  h <- openFile "Hoot.toml" ReadMode
-  contents <- hGetContents h
-
-  case Package.parsePackage contents of
-    Toml.Failure err -> print err
-    Toml.Success _ table -> do
-      print table
-      let packageName = Package.name $ Package.package table
-      writeFile (packageName <.> "cabal") (snd $ runWriter $ initCabal $ packageName)
-
-handleAdd :: [String] -> IO ()
-handleAdd names = do
-  let output =
-        snd $
-          runWriter $
-            writeCabal
-              CabalPackage
-                { cabalVersion = "2.4",
-                  name = "example",
-                  version = "0.1",
-                  deps = map (,">0") names
-                }
-
-  _ <- writeFile "example.cabal" output
-
-  -- Freeze the cabal file to resolve package versions
-  _ <- system "cabal freeze"
-
-  -- Parse the dependencies from the freeze
-  res <- parseFromFile parseCabal "cabal.project.freeze"
-  case res of
-    Left err -> putStrLn $ "Parsing error: " ++ show err
-    Right result -> do
-      let findMatches :: [String] -> [(String, String)] -> [(String, String)]
-          findMatches strings = filter (\(x, _) -> x `elem` strings)
-
-      -- TODO Update the package versions for the new dependencies
-      mapM_ (\(name, v) -> putStrLn $ "Added " ++ name ++ " v" ++ v) (findMatches names result)
 
 app :: App ()
 app = do

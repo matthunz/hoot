@@ -1,6 +1,20 @@
-module Cabal (initCabal, CabalPackage(..), writeCabal) where
+module Cabal (initCabal, CabalPackage(..), writeCabal, parseCabal) where
 
 import Control.Monad.Writer
+import Text.Parsec.Text
+import Text.Parsec
+
+
+parseDep :: Parser (String, String)
+parseDep = do
+  _ <- manyTill anyChar (try (string " any."))
+  n <- manyTill anyChar (try (string " =="))
+  v <- manyTill anyChar (try (string "," <|> string "\n"))
+  return (n, v)
+
+parseCabal :: Parser [(String, String)]
+parseCabal = many . try $ parseDep
+
 
 field :: String -> String -> Writer String ()
 field key value = do

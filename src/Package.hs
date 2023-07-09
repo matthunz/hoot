@@ -4,12 +4,8 @@
 
 module Package (parsePackage, Package, name, package) where
 
-import Data.Functor
 import Data.Map
-import Data.Map qualified as TOMLTable
 import GHC.Generics qualified as G
-import Text.Parsec
-import Text.Parsec.Text
 import Toml
 import Toml.FromValue
 import Toml.FromValue.Generic
@@ -23,7 +19,7 @@ data TOMLValue
 
 type TOMLTable = Map String TOMLValue
 
-data Info = Info
+newtype Info = Info
   { name :: String
   }
   deriving (Show, G.Generic, Eq)
